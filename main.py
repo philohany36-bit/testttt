@@ -37,8 +37,10 @@ class RuleBasedChatbot:
                 }
             },
             "exit_node": {
-                "message": "شكراً لتواصلك مع Nexura Solutions! نتمنى لك يوماً سعيداً. 👋",
-                "buttons": {}
+                "message": "شكراً لتواصلك مع Nexura Solutions! نتمنى لك يوماً سعيداً. 👋\n(اضغط 1 لإعادة بدء المحادثة)",
+                "buttons": {
+                    "1": {"text": "بدء محادثة جديدة", "next_node": "start_node"}
+                }
             }
         }
         self.user_sessions = {}
@@ -52,6 +54,10 @@ class RuleBasedChatbot:
         self.user_sessions[user_id] = node_id
 
     def process_input(self, user_id, user_choice):
+        if user_choice == "init_start":
+            self.set_user_session(user_id, "start_node")
+            return self.render_response("start_node")
+
         current_node_id = self.get_user_session(user_id)
         current_node = self.decision_tree.get(current_node_id)
 
@@ -76,34 +82,36 @@ class RuleBasedChatbot:
             "buttons": node.get("buttons", {})
         }
 
-# إنشاء كائن البوت
 bot_instance = RuleBasedChatbot()
 
 class ChatRequest(BaseModel):
     user_id: str
     choice: str
 
-# واجهة الويب التفاعلية (HTML & CSS & JS) لتجربة البوت مباشرة من المتصفح
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexura Chatbot</title>
     <style>
-        body { font-family: Tahoma, sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .chat-container { width: 450px; background: #1e293b; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; height: 600px; }
-        .chat-header { background: #3b82f6; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; }
-        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-        .message { padding: 12px 16px; border-radius: 8px; max-width: 85%; line-height: 1.5; white-space: pre-line; }
-        .user { background: #2563eb; align-self: flex-end; }
-        .bot { background: #334155; align-self: flex-start; }
-        .buttons-container { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-        .chat-btn { background: #1d4ed8; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; text-align: right; font-size: 14px; }
-        .chat-btn:hover { background: #2563eb; }
-        .chat-input { display: flex; border-top: 1px solid #334155; padding: 10px; background: #0f172a; }
-        .chat-input input { flex: 1; padding: 10px; border: none; border-radius: 6px; background: #1e293b; color: #fff; outline: none; }
-        .chat-input button { background: #3b82f6; color: white; border: none; padding: 10px 15px; margin-right: 8px; border-radius: 6px; cursor: pointer; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .chat-container { width: 100%; max-width: 450px; background: #1e293b; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); display: flex; flex-direction: column; height: 90vh; max-height: 650px; overflow: hidden; }
+        .chat-header { background: #2563eb; padding: 18px; text-align: center; font-weight: bold; font-size: 19px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+        .message { padding: 12px 16px; border-radius: 10px; max-width: 85%; line-height: 1.5; white-space: pre-line; word-break: break-word; }
+        .user { background: #2563eb; align-self: flex-end; border-bottom-left-radius: 2px; }
+        .bot { background: #334155; align-self: flex-start; border-bottom-right-radius: 2px; }
+        .buttons-container { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; width: 100%; }
+        .chat-btn { background: #3b82f6; color: white; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; text-align: right; font-size: 14px; transition: background 0.2s ease; }
+        .chat-btn:hover { background: #1d4ed8; }
+        .chat-input { display: flex; border-top: 1px solid #334155; padding: 12px; background: #0f172a; gap: 8px; }
+        .chat-input input { flex: 1; padding: 10px 14px; border: 1px solid #334155; border-radius: 8px; background: #1e293b; color: #fff; outline: none; font-size: 14px; }
+        .chat-input input:focus { border-color: #3b82f6; }
+        .chat-input button { background: #2563eb; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s ease; }
+        .chat-input button:hover { background: #1d4ed8; }
     </style>
 </head>
 <body>
@@ -149,7 +157,7 @@ HTML_UI = """
             if (choiceOverride === null) {
                 appendMessage(choice, 'user');
                 input.value = '';
-            } else {
+            } else if (choiceOverride !== "init_start") {
                 appendMessage(`اخترت: ${choiceOverride}`, 'user');
             }
 
@@ -164,9 +172,8 @@ HTML_UI = """
             });
         }
 
-        // بدء المحادثة تلقائياً عند فتح الصفحة
         window.onload = () => {
-            sendChoice("1"); // أو البدء برقم البداية الافتراضي
+            sendChoice("init_start");
         };
     </script>
 </body>
